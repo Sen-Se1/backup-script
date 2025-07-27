@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  backup:
+    build: .
+    container_name: backup-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /mnt/srv/docker:/data:ro
+      - /mnt/srv/Mega:/backups
+      - /mnt/srv/docker/logs/backup:/logs

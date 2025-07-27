@@ -1,0 +1,13 @@
+defaults
+auth           on
+tls            on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        /logs/msmtp.log
+
+account        default
+host           ${EMAIL_HOST}
+port           ${EMAIL_PORT}
+user           ${EMAIL_USER}
+password       ${EMAIL_PASS}
+
+from           ${EMAIL_USER}
