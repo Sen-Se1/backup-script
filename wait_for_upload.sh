@@ -32,12 +32,14 @@ while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
     -d fs="mega:/" \
     -d remote="$REMOTE_FOLDER")
 
-  FILE_EXISTS=$(echo "$RESPONSE" | grep -w "\"Name\": \"$FILE_NAME\"")
+  # Extract file size for the given file name using jq
+  REMOTE_SIZE=$(echo "$RESPONSE" | jq -r --arg file "$FILE_NAME" '
+    .list[] | select(.Name == $file) | .Size // empty
+  ')
 
-  if [[ -z "$FILE_EXISTS" ]]; then
+  if [[ -z "$REMOTE_SIZE" ]]; then
     log INFO "🔍 File not found yet on MEGA. Retrying in $RETRY_INTERVAL seconds..."
   else
-    REMOTE_SIZE=$(echo "$RESPONSE" | grep -A 5 "\"Name\": \"$FILE_NAME\"" | grep -o '"Size":[0-9]*' | grep -o '[0-9]*')
     log INFO "☁️ Remote file size: $REMOTE_SIZE bytes"
 
     if [ "$REMOTE_SIZE" -eq "$LOCAL_SIZE" ]; then
