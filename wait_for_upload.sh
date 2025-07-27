@@ -5,7 +5,7 @@ FILE_NAME="$1"
 RC_USER="user"
 RC_PASS="rclone"
 RC_HOST="rclone:5572"
-REMOTE_PATH="shs-backup/$FILE_NAME"
+REMOTE_FOLDER="shs-backup"
 LOCAL_PATH="/backups/$FILE_NAME"
 
 # Load reusable logger
@@ -28,19 +28,21 @@ log INFO "⏳ Waiting for MEGA upload confirmation via Rclone RC API"
 
 while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
   RESPONSE=$(curl -s -u "$RC_USER:$RC_PASS" \
-    -X POST "http://$RC_HOST/operations/stat" \
-    -d "{\"fs\": \"mega:/\", \"remote\": \"$REMOTE_PATH\"}")
+    -X POST "http://$RC_HOST/operations/list" \
+    -d "{\"fs\": \"mega:/\", \"remote\": \"$REMOTE_FOLDER\"}")
 
-  REMOTE_SIZE=$(echo "$RESPONSE" | grep -o '"Size":[0-9]*' | grep -o '[0-9]*')
+  # Extract the JSON array of files (simplified grep approach)
+  FILE_INFO=$(echo "$RESPONSE" | grep -oP '(?<=\{)[^\}]*"Name":"'"$FILE_NAME"'"[^\}]*\}')
 
-  if [[ -n "$REMOTE_SIZE" ]]; then
-    log INFO "☁️ Remote file size: $REMOTE_SIZE bytes"
+  if [[ -n "$FILE_INFO" ]]; then
+    REMOTE_SIZE=$(echo "$FILE_INFO" | grep -oP '"Size":[0-9]+' | grep -o '[0-9]\+')
+    log INFO "☁️ File found on MEGA. Remote size: $REMOTE_SIZE bytes"
 
     if [ "$REMOTE_SIZE" -eq "$LOCAL_SIZE" ]; then
       log INFO "✅ Upload complete. Sizes match."
       exit 0
     else
-      log INFO "🔄 Upload in progress. Retrying in $RETRY_INTERVAL seconds..."
+      log INFO "🔄 Upload in progress. Remote size differs from local. Retrying in $RETRY_INTERVAL seconds..."
     fi
   else
     log INFO "🔍 File not found yet on MEGA. Retrying in $RETRY_INTERVAL seconds..."
