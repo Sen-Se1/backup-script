@@ -45,6 +45,9 @@ if [[ -n "$EMAIL_TO" ]]; then
     } | msmtp "$EMAIL_TO"
 fi
 
+# Wait for upload confirmation before deleting old backups
+/scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
+
 # Backup rotation
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
