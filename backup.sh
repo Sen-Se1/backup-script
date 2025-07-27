@@ -11,9 +11,7 @@ touch "$LOCK_FILE"
 LOG_FILE="/logs/backup.log"
 exec >> "$LOG_FILE" 2>&1
 
-# Load reusable logger
 source /scripts/logger.sh
-
 log INFO "🔁 Starting backup process"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -53,16 +51,20 @@ if [[ -n "$EMAIL_TO" ]]; then
     } | msmtp "$EMAIL_TO"
 fi
 
-# Wait for the backup file to be uploaded to MEGA (fully)
-/scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
-WAIT_RESULT=$?
+# 🕒 Optional wait for MEGA upload via Rclone
+if [[ "$ENABLE_RCLONE_WAIT" == "true" ]]; then
+    /scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
+    WAIT_RESULT=$?
 
-if [ $WAIT_RESULT -ne 0 ]; then
-    log ERROR "❌ Upload did not complete successfully. Skipping rotation to avoid data loss."
-    exit 1
+    if [ $WAIT_RESULT -ne 0 ]; then
+        log ERROR "❌ Upload did not complete successfully. Skipping rotation to avoid data loss."
+        exit 1
+    fi
+else
+    log INFO "⚠️ Skipping Rclone upload wait (ENABLE_RCLONE_WAIT not set or false)"
 fi
 
-# Backup rotation: keep only last $MAX_BACKUPS backups
+# 🔄 Backup rotation: keep only last $MAX_BACKUPS
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 

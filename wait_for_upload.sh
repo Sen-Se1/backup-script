@@ -2,13 +2,12 @@
 # Usage: ./wait_for_upload.sh backup-filename.gpg
 
 FILE_NAME="$1"
-RC_USER="user"
-RC_PASS="rclone"
-RC_HOST="rclone:5572"
-REMOTE_FOLDER="shs-backup"
+RC_USER="${RCLONE_USER:-user}"
+RC_PASS="${RCLONE_PASS:-rclone}"
+RC_HOST="${RCLONE_HOST:-rclone:5572}"
+REMOTE_FOLDER="${RCLONE_REMOTE_FOLDER:-shs-backup}"
 LOCAL_PATH="/backups/$FILE_NAME"
 
-# Load reusable logger
 source /scripts/logger.sh
 
 if [ ! -f "$LOCAL_PATH" ]; then
@@ -32,7 +31,6 @@ while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
     -d fs="mega:/" \
     -d remote="$REMOTE_FOLDER")
 
-  # Extract file size for the given file name using jq
   REMOTE_SIZE=$(echo "$RESPONSE" | jq -r --arg file "$FILE_NAME" '
     .list[] | select(.Name == $file) | .Size // empty
   ')
@@ -41,7 +39,6 @@ while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
     log INFO "🔍 File not found yet on MEGA. Retrying in $RETRY_INTERVAL seconds..."
   else
     log INFO "☁️ Remote file size: $REMOTE_SIZE bytes"
-
     if [ "$REMOTE_SIZE" -eq "$LOCAL_SIZE" ]; then
       log INFO "✅ Upload complete. Sizes match."
       exit 0

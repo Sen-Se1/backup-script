@@ -4,6 +4,7 @@ LABEL maintainer="SenSe1 <mbarkihoussem99@gmail.com>"
 LABEL description="Lightweight Docker backup container with GPG, Telegram, and Email notifications."
 
 ENV TZ=UTC \
+    ENABLE_RCLONE_WAIT=false \
     MAX_BACKUPS=4
 
 RUN apk add --no-cache bash gnupg curl msmtp ca-certificates tzdata gettext jq
