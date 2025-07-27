@@ -6,7 +6,7 @@ LABEL description="Lightweight Docker backup container with GPG, Telegram, and E
 ENV TZ=UTC \
     MAX_BACKUPS=4
 
-RUN apk add --no-cache bash gnupg curl msmtp ca-certificates tzdata
+RUN apk add --no-cache bash gnupg curl msmtp ca-certificates tzdata gettext
 
 # Create directories
 RUN mkdir -p /data /backups /logs /scripts /config

@@ -1,8 +1,7 @@
 version: '3.8'
-
 services:
   backup-service:
-    image: ghcr.io/sen-se1/docker-backup-bot:latest
+    build: .
     container_name: backup-service
     restart: unless-stopped
     # env_file:
