@@ -36,6 +36,6 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/<your-username>/docker-backup-bot:latest
+          tags: ghcr.io/sen-se1/docker-backup-bot:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

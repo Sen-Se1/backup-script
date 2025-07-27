@@ -8,15 +8,18 @@ ENV TZ=UTC \
 
 RUN apk add --no-cache bash gnupg curl msmtp ca-certificates tzdata
 
+# Create directories
 RUN mkdir -p /data /backups /logs /scripts /config
 
+# Copy scripts
 COPY backup.sh /scripts/backup.sh
-RUN chmod +x /scripts/backup.sh
-
+COPY logger.sh /scripts/logger.sh
+COPY entrypoint.sh /entrypoint.sh
 COPY crontab /etc/crontabs/root
 COPY msmtprc.template /config/msmtprc.template
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+
+# Set executable permissions
+RUN chmod +x /scripts/backup.sh /entrypoint.sh /scripts/logger.sh
 
 VOLUME /logs
 VOLUME /data

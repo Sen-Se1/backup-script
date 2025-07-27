@@ -1,13 +1,8 @@
 #!/bin/bash
 set -e
 
-log() {
-    local type="$1"
-    shift
-    local timestamp
-    timestamp=$(date +"[%Y-%m-%d %H:%M:%S %Z]")
-    echo "$timestamp [$type] $*"
-}
+# Load reusable logger
+source /scripts/logger.sh
 
 if [[ -n "$TZ" ]]; then
     log INFO "🌍 Setting timezone to $TZ"
@@ -15,8 +10,9 @@ if [[ -n "$TZ" ]]; then
     echo "$TZ" > /etc/timezone
 fi
 
-if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]] && [[ -z "$EMAIL_TO" ]]; then
-    log ERROR "❌ ERROR: At least one notification method required."
+if { [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; } && \
+   { [[ -z "$EMAIL_TO" || -z "$EMAIL_HOST" || -z "$EMAIL_PORT" || -z "$EMAIL_USER" || -z "$EMAIL_PASS" ]]; }; then
+    log ERROR "❌ ERROR: You must configure either a full Telegram setup or a full Email (SMTP) setup."
     exit 1
 fi
 

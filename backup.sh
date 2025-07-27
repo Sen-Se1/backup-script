@@ -3,13 +3,8 @@
 LOG_FILE="/logs/backup.log"
 exec >> "$LOG_FILE" 2>&1
 
-log() {
-    local type="$1"
-    shift
-    local timestamp
-    timestamp=$(date +"[%Y-%m-%d %H:%M:%S %Z]")
-    echo "$timestamp [$type] $*"
-}
+# Load reusable logger
+source /scripts/logger.sh
 
 log INFO "🔁 Starting backup process"
 
