@@ -29,24 +29,23 @@ log INFO "⏳ Waiting for MEGA upload confirmation via Rclone RC API"
 while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
   RESPONSE=$(curl -s -u "$RC_USER:$RC_PASS" \
     -X POST "http://$RC_HOST/operations/list" \
-    -d "{\"fs\": \"mega:/\", \"remote\": \"$REMOTE_FOLDER\"}")
+    -d fs="mega:/" \
+    -d remote="$REMOTE_FOLDER")
 
-  # Extract file info line containing the file name
-  FILE_LINE=$(echo "$RESPONSE" | grep "\"Name\":\"$FILE_NAME\"")
+  FILE_EXISTS=$(echo "$RESPONSE" | grep -w "\"Name\": \"$FILE_NAME\"")
 
-  if [[ -n "$FILE_LINE" ]]; then
-    # Extract the size value using sed (POSIX)
-    REMOTE_SIZE=$(echo "$FILE_LINE" | sed -n 's/.*"Size":\([0-9]*\).*/\1/p')
-    log INFO "☁️ File found on MEGA. Remote size: $REMOTE_SIZE bytes"
+  if [[ -z "$FILE_EXISTS" ]]; then
+    log INFO "🔍 File not found yet on MEGA. Retrying in $RETRY_INTERVAL seconds..."
+  else
+    REMOTE_SIZE=$(echo "$RESPONSE" | grep -A 5 "\"Name\": \"$FILE_NAME\"" | grep -o '"Size":[0-9]*' | grep -o '[0-9]*')
+    log INFO "☁️ Remote file size: $REMOTE_SIZE bytes"
 
     if [ "$REMOTE_SIZE" -eq "$LOCAL_SIZE" ]; then
       log INFO "✅ Upload complete. Sizes match."
       exit 0
     else
-      log INFO "🔄 Upload in progress. Remote size differs from local. Retrying in $RETRY_INTERVAL seconds..."
+      log INFO "🔄 Upload in progress. Retrying in $RETRY_INTERVAL seconds..."
     fi
-  else
-    log INFO "🔍 File not found yet on MEGA. Retrying in $RETRY_INTERVAL seconds..."
   fi
 
   sleep $RETRY_INTERVAL
