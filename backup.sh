@@ -28,12 +28,12 @@ echo "$GPG_PASSWORD" | gpg --batch --yes --passphrase-fd 0 -c "$BACKUP_FILE"
 rm "$BACKUP_FILE"
 log INFO "✅ Encrypted backup saved: $GPG_FILE"
 
-# Send notification for successful local backup
+# Notify local backup completed
 send_notifications "✅ Docker Backup Completed successfully in *local*.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
 
 UPLOAD_SUCCEEDED=false
 
-# --- Optional wait for Rclone upload (only for MEGA) ---
+# --- Optional Rclone wait ---
 if [[ "$ENABLE_RCLONE_WAIT" == "true" ]]; then
   log INFO "⏳ Waiting for MEGA upload confirmation"
   /scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
@@ -51,19 +51,33 @@ else
   log INFO "⚠️ Skipping Rclone upload wait (ENABLE_RCLONE_WAIT not enabled)"
 fi
 
-# --- Rotation: keep only last N backups ---
+# --- Rotation: Keep only last N backups ---
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 
 log INFO "🔄 Rotating old backups (keeping last $MAX_BACKUPS)"
-ls -1tr backup-*.tar.gz.gpg | head -n -"$MAX_BACKUPS" | tee /tmp/deleted_backups.txt | xargs -r rm --
-log INFO "🗑️ Deleted backups:"
-cat /tmp/deleted_backups.txt || log INFO "None to delete."
+ls -1tr backup-*.tar.gz.gpg | head -n -"$MAX_BACKUPS" > /tmp/deleted_backups.txt
+
+if [ -s /tmp/deleted_backups.txt ]; then
+  while IFS= read -r file; do
+    rm -f "$file"
+    log INFO "🗑️ Deleted old backups: $file"
+  done < /tmp/deleted_backups.txt
+  DELETED_FILES=$(paste -sd ', ' /tmp/deleted_backups.txt)
+else
+  log INFO "ℹ️ No old backups deleted"
+  DELETED_FILES=""
+fi
+
 rm -f /tmp/deleted_backups.txt
 
-# Now send cloud upload success notification **after** rotation if upload succeeded
+# --- Final cloud success notification with deletion summary ---
 if [ "$UPLOAD_SUCCEEDED" = true ]; then
-  send_notifications "✅ Docker Backup Completed successfully in *cloud*.\n🗑️ Old backups deleted during rotation.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+  if [[ -n "$DELETED_FILES" ]]; then
+    send_notifications "✅ Docker Backup Completed successfully in *cloud*.\n🗑️ Deleted old backups: $DELETED_FILES\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+  else
+    send_notifications "✅ Docker Backup Completed successfully in *cloud*.\nℹ️ No old backups deleted.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+  fi
 fi
 
 log INFO "✅ Backup task complete"
