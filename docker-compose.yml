@@ -14,10 +14,11 @@ services:
       TELEGRAM_BOT_TOKEN: 
       TELEGRAM_CHAT_ID: 
 
-      EMAIL_HOST: smtp.example.com
-      EMAIL_PORT: 587
-      EMAIL_USER: me@example.com
-      EMAIL_PASS: secret
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: 587
+      SMTP_USER: me@example.com
+      SMTP_PASS: secret
+      EMAIL_FROM: backupbot@yourdomain.com
       EMAIL_TO: notify@example.com
 
       CRON_SCHEDULE: "30 1 * * *"

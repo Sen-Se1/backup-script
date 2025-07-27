@@ -5,9 +5,8 @@ tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile        /logs/msmtp.log
 
 account        default
-host           ${EMAIL_HOST}
-port           ${EMAIL_PORT}
-user           ${EMAIL_USER}
-password       ${EMAIL_PASS}
-
-from           ${EMAIL_USER}
+host           $SMTP_HOST
+port           $SMTP_PORT
+from           $EMAIL_FROM
+user           $SMTP_USER
+password       $SMTP_PASS

@@ -12,7 +12,6 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_FILE="/backups/backup-${TIMESTAMP}.tar.gz"
 GPG_FILE="$BACKUP_FILE.gpg"
 
-# Adjust folder name "container" if needed to your actual folder inside /data
 log INFO "📦 Creating tar archive: $BACKUP_FILE"
 tar -czf "$BACKUP_FILE" -C /data .
 
@@ -21,6 +20,7 @@ echo "$GPG_PASSWORD" | gpg --batch --yes --passphrase-fd 0 -c "$BACKUP_FILE"
 rm "$BACKUP_FILE"
 log INFO "✅ Encrypted backup saved: $GPG_FILE"
 
+# Telegram Notification
 if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
     log INFO "📤 Sending Telegram notification"
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
@@ -28,15 +28,24 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
         -d text="✅ Backup completed: backup-${TIMESTAMP}.tar.gz.gpg"
 fi
 
+# Email Notification
 if [[ -n "$EMAIL_TO" ]]; then
-    # Generate msmtp config dynamically before sending email
     envsubst < /config/msmtprc.template > /etc/msmtprc
     chmod 600 /etc/msmtprc
 
     log INFO "📧 Sending Email notification"
-    echo "Backup completed: backup-${TIMESTAMP}.tar.gz.gpg" | msmtp "$EMAIL_TO"
+    EMAIL_SUBJECT="✅ Docker Backup Completed: $TIMESTAMP"
+    EMAIL_BODY="Your Docker backup completed successfully.\n\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg\n📅 Date: $(date)\n"
+
+    {
+        echo -e "Subject: $EMAIL_SUBJECT"
+        echo -e "From: Docker Backup Bot <$EMAIL_FROM>"
+        echo -e "To: <$EMAIL_TO>\n"
+        echo -e "$EMAIL_BODY"
+    } | msmtp "$EMAIL_TO"
 fi
 
+# Backup rotation
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 
