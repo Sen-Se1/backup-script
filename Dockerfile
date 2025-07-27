@@ -16,12 +16,13 @@ RUN mkdir -p /data /backups /logs /scripts /config
 COPY backup.sh /scripts/backup.sh
 COPY wait_for_upload.sh /scripts/wait_for_upload.sh
 COPY logger.sh /scripts/logger.sh
+COPY notify.sh /scripts/notify.sh
 COPY entrypoint.sh /entrypoint.sh
 COPY crontab /etc/crontabs/root
 COPY msmtprc.template /config/msmtprc.template
 
 # Set executable permissions
-RUN chmod +x /scripts/backup.sh /scripts/wait_for_upload.sh /entrypoint.sh /scripts/logger.sh
+RUN chmod +x /scripts/backup.sh /scripts/wait_for_upload.sh /scripts/logger.sh /scripts/notify.sh /entrypoint.sh
 
 VOLUME /logs
 VOLUME /data
