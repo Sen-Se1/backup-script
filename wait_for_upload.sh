@@ -31,11 +31,12 @@ while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
     -X POST "http://$RC_HOST/operations/list" \
     -d "{\"fs\": \"mega:/\", \"remote\": \"$REMOTE_FOLDER\"}")
 
-  # Extract the JSON array of files (simplified grep approach)
-  FILE_INFO=$(echo "$RESPONSE" | grep -oP '(?<=\{)[^\}]*"Name":"'"$FILE_NAME"'"[^\}]*\}')
+  # Extract file info line containing the file name
+  FILE_LINE=$(echo "$RESPONSE" | grep "\"Name\":\"$FILE_NAME\"")
 
-  if [[ -n "$FILE_INFO" ]]; then
-    REMOTE_SIZE=$(echo "$FILE_INFO" | grep -oP '"Size":[0-9]+' | grep -o '[0-9]\+')
+  if [[ -n "$FILE_LINE" ]]; then
+    # Extract the size value using sed (POSIX)
+    REMOTE_SIZE=$(echo "$FILE_LINE" | sed -n 's/.*"Size":\([0-9]*\).*/\1/p')
     log INFO "☁️ File found on MEGA. Remote size: $REMOTE_SIZE bytes"
 
     if [ "$REMOTE_SIZE" -eq "$LOCAL_SIZE" ]; then
