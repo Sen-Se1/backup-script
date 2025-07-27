@@ -1,5 +1,13 @@
 #!/bin/bash
 
+LOCK_FILE="/tmp/backup.lock"
+if [ -e "$LOCK_FILE" ]; then
+  echo "Backup already running. Exiting." >&2
+  exit 1
+fi
+trap 'rm -f "$LOCK_FILE"' EXIT
+touch "$LOCK_FILE"
+
 LOG_FILE="/logs/backup.log"
 exec >> "$LOG_FILE" 2>&1
 
@@ -25,7 +33,7 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
     log INFO "📤 Sending Telegram notification"
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
         -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="✅ Backup completed: backup-${TIMESTAMP}.tar.gz.gpg"
+        -d text="✅ Backup created: backup-${TIMESTAMP}.tar.gz.gpg"
 fi
 
 # Email Notification
@@ -45,10 +53,16 @@ if [[ -n "$EMAIL_TO" ]]; then
     } | msmtp "$EMAIL_TO"
 fi
 
-# Wait for upload confirmation before deleting old backups
+# Wait for the backup file to be uploaded to MEGA (fully)
 /scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
+WAIT_RESULT=$?
 
-# Backup rotation
+if [ $WAIT_RESULT -ne 0 ]; then
+    log ERROR "❌ Upload did not complete successfully. Skipping rotation to avoid data loss."
+    exit 1
+fi
+
+# Backup rotation: keep only last $MAX_BACKUPS backups
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 

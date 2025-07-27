@@ -5,6 +5,8 @@ services:
     image: ghcr.io/sen-se1/docker-backup-bot:latest
     container_name: backup-service
     restart: unless-stopped
+    depends_on:
+      - rclone
     # env_file:
     #   - .env
     environment:
