@@ -14,9 +14,7 @@ GPG_FILE="$BACKUP_FILE.gpg"
 
 # Adjust folder name "container" if needed to your actual folder inside /data
 log INFO "📦 Creating tar archive: $BACKUP_FILE"
-tar -czf "$BACKUP_FILE" \
-    -C /data container \
-    -C /data/compose docker-compose.yml
+tar -czf "$BACKUP_FILE" -C /data .
 
 log INFO "🔐 Encrypting backup"
 echo "$GPG_PASSWORD" | gpg --batch --yes --passphrase-fd 0 -c "$BACKUP_FILE"
