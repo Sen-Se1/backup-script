@@ -12,6 +12,12 @@ services:
       TZ: Europe/Paris
       GPG_PASSWORD: changeme
 
+      ENABLE_RCLONE_WAIT: true  # 👈 Enable upload wait check (now support only mega) "Default value is false"
+      RCLONE_USER: user
+      RCLONE_PASS: rclone
+      RCLONE_HOST: rclone:5572
+      RCLONE_REMOTE_FOLDER: shs-backup
+
       TELEGRAM_BOT_TOKEN: 
       TELEGRAM_CHAT_ID: 
 
@@ -27,4 +33,4 @@ services:
     volumes:
       - /mnt/srv/docker:/data:ro
       - /mnt/srv/Mega:/backups
-      - /mnt/srv/docker/logs/backup:/logs
+      - /mnt/srv/docker/container/backup-service/logs/:/logs
