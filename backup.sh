@@ -31,6 +31,8 @@ log INFO "✅ Encrypted backup saved: $GPG_FILE"
 # Send notification for successful local backup
 send_notifications "✅ Docker Backup Completed successfully in *local*.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
 
+UPLOAD_SUCCEEDED=false
+
 # --- Optional wait for Rclone upload (only for MEGA) ---
 if [[ "$ENABLE_RCLONE_WAIT" == "true" ]]; then
   log INFO "⏳ Waiting for MEGA upload confirmation"
@@ -39,7 +41,7 @@ if [[ "$ENABLE_RCLONE_WAIT" == "true" ]]; then
 
   if [ $WAIT_RESULT -eq 0 ]; then
     log INFO "✅ Cloud upload complete"
-    send_notifications "✅ Docker Backup Completed successfully in *cloud*.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+    UPLOAD_SUCCEEDED=true
   else
     log ERROR "❌ Upload did not complete successfully"
     send_notifications "❌ Docker Backup *upload failed* in *cloud*.\n⚠️ Retaining local backup.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
@@ -58,5 +60,10 @@ ls -1tr backup-*.tar.gz.gpg | head -n -"$MAX_BACKUPS" | tee /tmp/deleted_backups
 log INFO "🗑️ Deleted backups:"
 cat /tmp/deleted_backups.txt || log INFO "None to delete."
 rm -f /tmp/deleted_backups.txt
+
+# Now send cloud upload success notification **after** rotation if upload succeeded
+if [ "$UPLOAD_SUCCEEDED" = true ]; then
+  send_notifications "✅ Docker Backup Completed successfully in *cloud*.\n🗑️ Old backups deleted during rotation.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+fi
 
 log INFO "✅ Backup task complete"
