@@ -12,6 +12,8 @@ LOG_FILE="/logs/backup.log"
 exec >> "$LOG_FILE" 2>&1
 
 source /scripts/logger.sh
+source /scripts/notify.sh
+
 log INFO "🔁 Starting backup process"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -26,45 +28,28 @@ echo "$GPG_PASSWORD" | gpg --batch --yes --passphrase-fd 0 -c "$BACKUP_FILE"
 rm "$BACKUP_FILE"
 log INFO "✅ Encrypted backup saved: $GPG_FILE"
 
-# Telegram Notification
-if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
-    log INFO "📤 Sending Telegram notification"
-    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-        -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="✅ Backup created: backup-${TIMESTAMP}.tar.gz.gpg"
-fi
+# Send notification for successful local backup
+send_notifications "✅ Docker Backup Completed successfully in *local*.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
 
-# Email Notification
-if [[ -n "$EMAIL_TO" ]]; then
-    envsubst < /config/msmtprc.template > /etc/msmtprc
-    chmod 600 /etc/msmtprc
-
-    log INFO "📧 Sending Email notification"
-    EMAIL_SUBJECT="✅ Docker Backup Completed: $TIMESTAMP"
-    EMAIL_BODY="Your Docker backup completed successfully.\n\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg\n📅 Date: $(date)\n"
-
-    {
-        echo -e "Subject: $EMAIL_SUBJECT"
-        echo -e "From: Docker Backup Bot <$EMAIL_FROM>"
-        echo -e "To: <$EMAIL_TO>\n"
-        echo -e "$EMAIL_BODY"
-    } | msmtp "$EMAIL_TO"
-fi
-
-# 🕒 Optional wait for MEGA upload via Rclone
+# --- Optional wait for Rclone upload (only for MEGA) ---
 if [[ "$ENABLE_RCLONE_WAIT" == "true" ]]; then
-    /scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
-    WAIT_RESULT=$?
+  log INFO "⏳ Waiting for MEGA upload confirmation"
+  /scripts/wait_for_upload.sh "backup-${TIMESTAMP}.tar.gz.gpg"
+  WAIT_RESULT=$?
 
-    if [ $WAIT_RESULT -ne 0 ]; then
-        log ERROR "❌ Upload did not complete successfully. Skipping rotation to avoid data loss."
-        exit 1
-    fi
+  if [ $WAIT_RESULT -eq 0 ]; then
+    log INFO "✅ Cloud upload complete"
+    send_notifications "✅ Docker Backup Completed successfully in *cloud*.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+  else
+    log ERROR "❌ Upload did not complete successfully"
+    send_notifications "❌ Docker Backup *upload failed* in *cloud*.\n⚠️ Retaining local backup.\n📦 File: backup-${TIMESTAMP}.tar.gz.gpg"
+    exit 1
+  fi
 else
-    log INFO "⚠️ Skipping Rclone upload wait (ENABLE_RCLONE_WAIT not set or false)"
+  log INFO "⚠️ Skipping Rclone upload wait (ENABLE_RCLONE_WAIT not enabled)"
 fi
 
-# 🔄 Backup rotation: keep only last $MAX_BACKUPS
+# --- Rotation: keep only last N backups ---
 MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 

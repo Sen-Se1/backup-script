@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: ./wait_for_upload.sh backup-filename.gpg
+# Usage: ./wait_for_upload.sh backup-filename.tar.gz.gpg
 
 FILE_NAME="$1"
 RC_USER="${RCLONE_USER:-user}"
@@ -32,7 +32,7 @@ while [ $WAITED -lt $MAX_WAIT_SECONDS ]; do
     -d remote="$REMOTE_FOLDER")
 
   REMOTE_SIZE=$(echo "$RESPONSE" | jq -r --arg file "$FILE_NAME" '
-    .list[] | select(.Name == $file) | .Size // empty
+    .list[]? | select(.Name == $file) | .Size // empty
   ')
 
   if [[ -z "$REMOTE_SIZE" ]]; then
