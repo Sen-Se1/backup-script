@@ -12,6 +12,7 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_FILE="/backups/backup-${TIMESTAMP}.tar.gz"
 GPG_FILE="$BACKUP_FILE.gpg"
 
+# Adjust folder name "container" if needed to your actual folder inside /data
 log INFO "📦 Creating tar archive: $BACKUP_FILE"
 tar -czf "$BACKUP_FILE" \
     -C /data container \
@@ -30,6 +31,10 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
 fi
 
 if [[ -n "$EMAIL_TO" ]]; then
+    # Generate msmtp config dynamically before sending email
+    envsubst < /config/msmtprc.template > /etc/msmtprc
+    chmod 600 /etc/msmtprc
+
     log INFO "📧 Sending Email notification"
     echo "Backup completed: backup-${TIMESTAMP}.tar.gz.gpg" | msmtp "$EMAIL_TO"
 fi
@@ -38,7 +43,7 @@ MAX_BACKUPS=${MAX_BACKUPS:-4}
 cd /backups || exit 1
 
 log INFO "🔄 Rotating old backups (keeping last $MAX_BACKUPS)"
-ls -1tr backup-*.tar.gz.gpg | head -n -"$MAX_BACKUPS" | tee /tmp/deleted_backups.txt | xargs -d '\n' -r rm --
+ls -1tr backup-*.tar.gz.gpg | head -n -"$MAX_BACKUPS" | tee /tmp/deleted_backups.txt | xargs -r rm --
 log INFO "🗑️ Deleted backups:"
 cat /tmp/deleted_backups.txt || log INFO "None to delete."
 rm -f /tmp/deleted_backups.txt
